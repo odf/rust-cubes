@@ -5,6 +5,7 @@ use crate::backtrack::BackTrackIterator;
 use crate::backtrack::BackTracking;
 
 
+type Position = [i32; 3];
 type Direction = [i32; 3];
 type Symmetry = [[i32; 3]; 3];
 
@@ -53,7 +54,7 @@ static SYMMETRIES: [Symmetry; 24] = [
 
 
 type Code = Vec<[usize; 6]>;
-type Shape = HashSet<[i32; 3]>;
+type Shape = HashSet<Position>;
 
 
 fn map_shape(shape: &Shape, sym: Symmetry) -> Shape {
@@ -71,7 +72,7 @@ fn map_shape(shape: &Shape, sym: Symmetry) -> Shape {
 }
 
 
-fn decode(code: &Code) -> Shape {
+fn decode(code: &Code) -> Vec<Position> {
     let mut shape = HashSet::from([[0, 0, 0]]);
     let mut cubes = Vec::from([[0, 0, 0]]);
 
@@ -95,11 +96,11 @@ fn decode(code: &Code) -> Shape {
         }
     }
 
-    shape
+    cubes
 }
 
 
-fn encode(shape: &Shape, start: [i32; 3]) -> Code {
+fn encode(shape: &Shape, start: Position) -> Code {
     let mut index = HashMap::from([(start, 1)]);
     let mut cubes = Vec::from([start]);
     let mut code: Code = vec![];
@@ -130,12 +131,39 @@ fn encode(shape: &Shape, start: [i32; 3]) -> Code {
 
 
 struct CubeGenState {
-    code: Vec<usize>,
+    code: Code,
 }
 
 
 struct CubeBackTracking {
     max_size: usize,
+}
+
+
+impl BackTracking for CubeBackTracking {
+    type State = CubeGenState;
+    type Item = Vec<Position>;
+
+    fn root(&self) -> Self::State {
+        CubeGenState { code: vec![[0, 0, 0, 0, 0, 0]]}
+    }
+
+    fn extract(&self, state: &Self::State) -> Option<Self::Item> {
+        if state.code.len() == self.max_size {
+            Some(decode(&state.code))
+        } else {
+            None
+        }
+    }
+
+    fn children(&self, state: &Self::State) -> Vec<Self::State> {
+        let code = &state.code;
+        let cubes = decode(code);
+
+        let mut result = vec![];
+
+        result
+    }
 }
 
 
@@ -145,7 +173,7 @@ fn test_decode() {
         decode(&vec![
             [0, 0, 0, 0, 0, 0]
         ]),
-        HashSet::from([
+        Vec::from([
             [0, 0, 0]
         ])
     );
@@ -154,7 +182,7 @@ fn test_decode() {
         decode(&vec![
             [0, 2, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0],
         ]),
-        HashSet::from([
+        Vec::from([
             [0, 0, 0], [1, 0, 0],
         ])
     );
@@ -163,8 +191,8 @@ fn test_decode() {
         decode(&vec![
             [2, 3, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0], [1, 0, 0, 0, 0, 0],
         ]),
-        HashSet::from([
-            [ 0,  0,  0], [ 1,  0,  0], [-1,  0,  0],
+        Vec::from([
+            [0,  0,  0], [-1,  0,  0], [1,  0,  0],
         ])
     );
 
@@ -172,7 +200,7 @@ fn test_decode() {
         decode(&vec![
             [0, 2, 0, 0, 0, 0], [1, 3, 0, 0, 0, 0], [2, 0, 0, 0, 0, 0],
         ]),
-        HashSet::from([
+        Vec::from([
             [ 0,  0,  0], [ 1,  0,  0], [ 2,  0,  0],
         ])
     );
