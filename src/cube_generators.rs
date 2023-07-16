@@ -130,40 +130,70 @@ fn encode(shape: &Shape, start: Position) -> Code {
 }
 
 
-struct CubeGenState {
-    code: Code,
-}
-
-
 struct CubeBackTracking {
     max_size: usize,
 }
 
 
 impl BackTracking for CubeBackTracking {
-    type State = CubeGenState;
+    type State = Code;
     type Item = Vec<Position>;
 
-    fn root(&self) -> Self::State {
-        CubeGenState { code: vec![[0, 0, 0, 0, 0, 0]]}
+    fn root(&self) -> Code {
+        vec![[0; 6]]
     }
 
-    fn extract(&self, state: &Self::State) -> Option<Self::Item> {
-        if state.code.len() == self.max_size {
-            Some(decode(&state.code))
+    fn extract(&self, code: &Code) -> Option<Self::Item> {
+        if code.len() == self.max_size {
+            Some(decode(&code))
         } else {
             None
         }
     }
 
-    fn children(&self, state: &Self::State) -> Vec<Self::State> {
-        let code = &state.code;
+    fn children(&self, code: &Code) -> Vec<Code> {
         let cubes = decode(code);
+        let shape: HashSet<_> = cubes.iter().cloned().collect();
+        let index: HashMap<_, _> = cubes.iter().enumerate()
+            .map(|(i, p)| (p, i + 1))
+            .collect();
 
         let mut result = vec![];
 
+        for (i, p) in cubes.iter().enumerate() {
+            for (j, d) in DIRECTIONS.iter().enumerate() {
+                let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
+
+                if !shape.contains(&q) {
+                    let mut new_shape = shape.clone();
+                    new_shape.insert(q);
+
+                    let mut new_code = code.clone();
+                    new_code[i][j] = code.len() + 1;
+
+                    let mut c = [0; 6];
+                    for (k, e) in DIRECTIONS.iter().enumerate() {
+                        let r = [q[0] + e[0], q[1] + e[1], q[2] + e[2]];
+                        if let Some(&nu) = index.get(&r) {
+                            c[k] = nu;
+                        }
+                    }
+                    new_code.push(c);
+
+                    if is_canonical(&new_shape, &new_code) {
+                        result.push(new_code);
+                    }
+                }
+            }
+        }
+
         result
     }
+}
+
+
+fn is_canonical(shape: &HashSet<Position>, code: &Code) -> bool {
+    todo!()
 }
 
 
