@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::backtrack::BackTrackIterator;
 use crate::backtrack::BackTracking;
 
@@ -53,14 +51,14 @@ static SYMMETRIES: [Symmetry; 24] = [
 
 
 type Code = Vec<[usize; 2]>;
-type Shape = HashSet<Position>;
+type Shape = Vec<Position>;
 
 
 fn map_shape(shape: &Shape, sym: Symmetry) -> Shape {
-    let mut new_shape = HashSet::new();
+    let mut new_shape = vec![];
 
     for p in shape {
-        new_shape.insert([
+        new_shape.push([
             p[0] * sym[0][0] + p[1] * sym[1][0] + p[2] * sym[2][0],
             p[0] * sym[0][1] + p[1] * sym[1][1] + p[2] * sym[2][1],
             p[0] * sym[0][2] + p[1] * sym[1][2] + p[2] * sym[2][2],
@@ -71,8 +69,7 @@ fn map_shape(shape: &Shape, sym: Symmetry) -> Shape {
 }
 
 
-fn decode(code: &Code) -> Vec<Position> {
-    let mut shape = HashSet::from([[0, 0, 0]]);
+fn decode(code: &Code) -> Shape {
     let mut cubes = Vec::from([[0, 0, 0]]);
 
     for [from, dir] in code {
@@ -80,8 +77,7 @@ fn decode(code: &Code) -> Vec<Position> {
         let d = DIRECTIONS[*dir];
         let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
 
-        assert!(!shape.contains(&q));
-        shape.insert(q);
+        assert!(!cubes.contains(&q));
         cubes.push(q);
     }
 
@@ -90,7 +86,6 @@ fn decode(code: &Code) -> Vec<Position> {
 
 
 fn encode(shape: &Shape, start: Position) -> Code {
-    let mut seen = HashSet::from([start]);
     let mut cubes = Vec::from([start]);
     let mut code: Code = vec![];
 
@@ -102,9 +97,8 @@ fn encode(shape: &Shape, start: Position) -> Code {
         for (j, d) in DIRECTIONS.iter().enumerate() {
             let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
 
-            if shape.contains(&q) && !seen.contains(&q) {
+            if shape.contains(&q) && !cubes.contains(&q) {
                 cubes.push(q);
-                seen.insert(q);
                 code.push([n, j]);
             }
         }
@@ -138,7 +132,6 @@ impl BackTracking for CubeBackTracking {
 
     fn children(&self, code: &Code) -> Vec<Code> {
         let cubes = decode(code);
-        let shape: HashSet<_> = cubes.iter().cloned().collect();
 
         if code.len() >= self.max_size - 1 {
             vec![]
@@ -152,9 +145,9 @@ impl BackTracking for CubeBackTracking {
                 for (j, d) in DIRECTIONS.iter().enumerate() {
                     let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
 
-                    if !shape.contains(&q) {
-                        let mut new_shape = shape.clone();
-                        new_shape.insert(q);
+                    if !cubes.contains(&q) {
+                        let mut new_shape = cubes.clone();
+                        new_shape.push(q);
 
                         let mut new_code = code.clone();
                         new_code.push([i, j]);
@@ -172,7 +165,7 @@ impl BackTracking for CubeBackTracking {
 }
 
 
-fn is_canonical(shape: &HashSet<Position>, code: &Code) -> bool {
+fn is_canonical(shape: &Shape, code: &Code) -> bool {
     for sym in SYMMETRIES {
         let mapped = map_shape(shape, sym);
         for &p in &mapped {
@@ -218,12 +211,12 @@ fn test_decode() {
 
     assert_eq!(
         decode(&vec![[0, 0], [0, 1]]),
-        Vec::from([[0,  0,  0], [-1,  0,  0], [1,  0,  0]])
+        Vec::from([[0, 0, 0], [-1, 0, 0], [1, 0, 0]])
     );
 
     assert_eq!(
         decode(&vec![[0, 1], [1, 1]]),
-        Vec::from([[ 0,  0,  0], [ 1,  0,  0], [ 2,  0,  0]])
+        Vec::from([[0, 0, 0], [1, 0, 0], [2, 0, 0]])
     );
 }
 
@@ -231,34 +224,22 @@ fn test_decode() {
 #[test]
 fn test_encode() {
     assert_eq!(
-        encode(
-            &HashSet::from([[0, 0, 0]]),
-            [0, 0, 0]
-        ),
+        encode(&vec![[0, 0, 0]], [0, 0, 0]),
         Vec::<[usize; 2]>::new()
     );
 
     assert_eq!(
-        encode(
-            &HashSet::from([[0, 0, 0], [1, 0, 0]]),
-            [0, 0, 0]
-        ),
+        encode(&vec![[0, 0, 0], [1, 0, 0]], [0, 0, 0]),
         vec![[0, 1]]
     );
 
     assert_eq!(
-        encode(
-            &HashSet::from([[ 0,  0,  0], [ 1,  0,  0], [-1,  0,  0]]),
-            [0, 0, 0]
-        ),
+        encode(&vec![[0, 0, 0], [1, 0, 0], [-1, 0, 0]], [0, 0, 0]),
         vec![[0, 0], [0, 1]]
     );
 
     assert_eq!(
-        encode(
-            &HashSet::from([[ 0,  0,  0], [ 1,  0,  0], [ 2,  0,  0]]),
-            [0, 0, 0]
-        ),
+        encode(&vec![[0, 0, 0], [1, 0, 0], [2, 0, 0]], [0, 0, 0]),
         vec![[0, 1], [1, 1]]
     );
 }
