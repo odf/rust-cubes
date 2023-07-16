@@ -140,10 +140,15 @@ impl BackTracking for CubeBackTracking {
         let cubes = decode(code);
         let shape: HashSet<_> = cubes.iter().cloned().collect();
 
-        let mut result = vec![];
+        if code.len() >= self.max_size - 1 {
+            vec![]
+        } else {
+            let start = if let Some(c) = code.last() { c[0] } else { 0 };
+            let mut result = vec![];
 
-        if code.len() < self.max_size - 1 {
-            for (i, p) in cubes.iter().enumerate() {
+            for i in start..cubes.len() {
+                let p = cubes[i];
+
                 for (j, d) in DIRECTIONS.iter().enumerate() {
                     let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
 
@@ -160,9 +165,9 @@ impl BackTracking for CubeBackTracking {
                     }
                 }
             }
-        }
 
-        result
+            result
+        }
     }
 }
 
