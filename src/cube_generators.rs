@@ -54,6 +54,7 @@ type Code = Vec<[usize; 2]>;
 type Shape = Vec<Position>;
 
 
+#[inline(never)]
 fn map_shape(shape: &Shape, sym: Symmetry) -> Shape {
     let mut new_shape = vec![];
 
@@ -85,27 +86,37 @@ fn decode(code: &Code) -> Shape {
 }
 
 
-fn encode(shape: &Shape, start: Position) -> Code {
+#[inline(never)]
+fn compare_encoding(shape: &Shape, start: Position, code: &Code) -> i32 {
     let mut cubes = Vec::from([start]);
-    let mut code: Code = vec![];
 
     let mut n = 0;
+    let mut k = 0;
 
     while n < cubes.len() {
         let p = cubes[n];
 
-        for (j, d) in DIRECTIONS.iter().enumerate() {
+        for j in 0..6 {
+            let d = DIRECTIONS[j];
             let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
 
             if shape.contains(&q) && !cubes.contains(&q) {
-                cubes.push(q);
-                code.push([n, j]);
+                let c = [n, j];
+
+                if c < code[k] {
+                    return -1;
+                } else if c > code[k] {
+                    return 1;
+                } else {
+                    cubes.push(q);
+                    k += 1;
+                }
             }
         }
         n += 1;
     }
 
-    code
+    0
 }
 
 
@@ -165,12 +176,12 @@ impl BackTracking for CubeBackTracking {
 }
 
 
+#[inline(never)]
 fn is_canonical(shape: &Shape, code: &Code) -> bool {
     for sym in SYMMETRIES {
         let mapped = map_shape(shape, sym);
         for &p in &mapped {
-            let c = encode(&mapped, p);
-            if c < *code {
+            if compare_encoding(&mapped, p, &code) < 0 {
                 return false;
             }
         }
@@ -224,22 +235,34 @@ fn test_decode() {
 #[test]
 fn test_encode() {
     assert_eq!(
-        encode(&vec![[0, 0, 0]], [0, 0, 0]),
-        Vec::<[usize; 2]>::new()
+        compare_encoding(
+            &vec![[0, 0, 0]],
+            [0, 0, 0],
+            &vec![]
+        ), 0
     );
 
     assert_eq!(
-        encode(&vec![[0, 0, 0], [1, 0, 0]], [0, 0, 0]),
-        vec![[0, 1]]
+        compare_encoding(
+            &vec![[0, 0, 0], [1, 0, 0]],
+            [0, 0, 0],
+            &vec![[0, 1]]
+        ), 0
     );
 
     assert_eq!(
-        encode(&vec![[0, 0, 0], [1, 0, 0], [-1, 0, 0]], [0, 0, 0]),
-        vec![[0, 0], [0, 1]]
+        compare_encoding(
+            &vec![[0, 0, 0], [1, 0, 0],
+            [-1, 0, 0]], [0, 0, 0],
+            &vec![[0, 0], [0, 1]]
+        ), 0
     );
 
     assert_eq!(
-        encode(&vec![[0, 0, 0], [1, 0, 0], [2, 0, 0]], [0, 0, 0]),
-        vec![[0, 1], [1, 1]]
+        compare_encoding(
+            &vec![[0, 0, 0], [1, 0, 0], [2, 0, 0]],
+            [0, 0, 0],
+            &vec![[0, 1], [1, 1]]
+        ), 0
     );
 }
