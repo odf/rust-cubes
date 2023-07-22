@@ -92,7 +92,8 @@ fn compare_encoding(
 )
     -> i32
 {
-    let mut cubes = Vec::from([start]);
+    let mut cubes = Vec::with_capacity(shape.len());
+    cubes.push(start);
 
     let mut n = 0;
     let mut k = 0;
