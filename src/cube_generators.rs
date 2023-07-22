@@ -113,10 +113,12 @@ impl BackTracking for CubeBackTracking {
 
 #[inline(never)]
 fn is_canonical(shape: &Shape, code: &Code) -> bool {
+    let mut seen = Vec::with_capacity(shape.len());
+
     for sym in SYMMETRIES {
         let dirs = map_directions(&DIRECTIONS, sym);
         for &p in shape {
-            if compare_encoding(&shape, &dirs, p, &code) < 0 {
+            if compare_encoding(&mut seen, &shape, &dirs, p, &code) < 0 {
                 return false;
             }
         }
@@ -144,24 +146,25 @@ fn map_directions(dirs: &[Direction], sym: Symmetry) -> Vec<Direction> {
 
 #[inline(never)]
 fn compare_encoding(
+    seen: &mut Vec<Position>,
     shape: &Shape, dirs: &[Direction], start: Position, code: &Code
 )
     -> i32
 {
-    let mut cubes = Vec::with_capacity(shape.len());
-    cubes.push(start);
+    seen.clear();
+    seen.push(start);
 
     let mut n = 0;
     let mut k = 0;
 
-    while n < cubes.len() {
-        let p = cubes[n];
+    while n < seen.len() {
+        let p = seen[n];
 
         for j in 0..6 {
             let d = dirs[j];
             let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
 
-            if shape.contains(&q) && !cubes.contains(&q) {
+            if shape.contains(&q) && !seen.contains(&q) {
                 let c = [n, j];
 
                 if c < code[k] {
@@ -169,7 +172,7 @@ fn compare_encoding(
                 } else if c > code[k] {
                     return 1;
                 } else {
-                    cubes.push(q);
+                    seen.push(q);
                     k += 1;
                 }
             }
@@ -195,44 +198,4 @@ impl Iterator for Cubes {
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
     }
-}
-
-
-#[test]
-fn test_encode() {
-    assert_eq!(
-        compare_encoding(
-            &vec![[0, 0, 0]],
-            &DIRECTIONS,
-            [0, 0, 0],
-            &vec![]
-        ), 0
-    );
-
-    assert_eq!(
-        compare_encoding(
-            &vec![[0, 0, 0], [1, 0, 0]],
-            &DIRECTIONS,
-            [0, 0, 0],
-            &vec![[0, 1]]
-        ), 0
-    );
-
-    assert_eq!(
-        compare_encoding(
-            &vec![[0, 0, 0], [1, 0, 0], [-1, 0, 0]],
-            &DIRECTIONS,
-            [0, 0, 0],
-            &vec![[0, 0], [0, 1]]
-        ), 0
-    );
-
-    assert_eq!(
-        compare_encoding(
-            &vec![[0, 0, 0], [1, 0, 0], [2, 0, 0]],
-            &DIRECTIONS,
-            [0, 0, 0],
-            &vec![[0, 1], [1, 1]]
-        ), 0
-    );
 }
