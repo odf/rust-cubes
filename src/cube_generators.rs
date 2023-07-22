@@ -54,61 +54,6 @@ type Code = Vec<[usize; 2]>;
 type Shape = Vec<Position>;
 
 
-#[inline(never)]
-fn map_directions(dirs: &[Direction], sym: Symmetry) -> Vec<Direction> {
-    let mut dirs_out = vec![];
-
-    for d in dirs {
-        dirs_out.push([
-            d[0] * sym[0][0] + d[1] * sym[1][0] + d[2] * sym[2][0],
-            d[0] * sym[0][1] + d[1] * sym[1][1] + d[2] * sym[2][1],
-            d[0] * sym[0][2] + d[1] * sym[1][2] + d[2] * sym[2][2],
-        ]);
-    }
-
-    dirs_out
-}
-
-
-#[inline(never)]
-fn compare_encoding(
-    shape: &Shape, dirs: &[Direction], start: Position, code: &Code
-)
-    -> i32
-{
-    let mut cubes = Vec::with_capacity(shape.len());
-    cubes.push(start);
-
-    let mut n = 0;
-    let mut k = 0;
-
-    while n < cubes.len() {
-        let p = cubes[n];
-
-        for j in 0..6 {
-            let d = dirs[j];
-            let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
-
-            if shape.contains(&q) && !cubes.contains(&q) {
-                let c = [n, j];
-
-                if c < code[k] {
-                    return -1;
-                } else if c > code[k] {
-                    return 1;
-                } else {
-                    cubes.push(q);
-                    k += 1;
-                }
-            }
-        }
-        n += 1;
-    }
-
-    0
-}
-
-
 struct CubeBackTracking {
     max_size: usize,
 }
@@ -178,6 +123,61 @@ fn is_canonical(shape: &Shape, code: &Code) -> bool {
     }
 
     true
+}
+
+
+#[inline(never)]
+fn map_directions(dirs: &[Direction], sym: Symmetry) -> Vec<Direction> {
+    let mut dirs_out = vec![];
+
+    for d in dirs {
+        dirs_out.push([
+            d[0] * sym[0][0] + d[1] * sym[1][0] + d[2] * sym[2][0],
+            d[0] * sym[0][1] + d[1] * sym[1][1] + d[2] * sym[2][1],
+            d[0] * sym[0][2] + d[1] * sym[1][2] + d[2] * sym[2][2],
+        ]);
+    }
+
+    dirs_out
+}
+
+
+#[inline(never)]
+fn compare_encoding(
+    shape: &Shape, dirs: &[Direction], start: Position, code: &Code
+)
+    -> i32
+{
+    let mut cubes = Vec::with_capacity(shape.len());
+    cubes.push(start);
+
+    let mut n = 0;
+    let mut k = 0;
+
+    while n < cubes.len() {
+        let p = cubes[n];
+
+        for j in 0..6 {
+            let d = dirs[j];
+            let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
+
+            if shape.contains(&q) && !cubes.contains(&q) {
+                let c = [n, j];
+
+                if c < code[k] {
+                    return -1;
+                } else if c > code[k] {
+                    return 1;
+                } else {
+                    cubes.push(q);
+                    k += 1;
+                }
+            }
+        }
+        n += 1;
+    }
+
+    0
 }
 
 
