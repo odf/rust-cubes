@@ -70,22 +70,6 @@ fn map_directions(dirs: &[Direction], sym: Symmetry) -> Vec<Direction> {
 }
 
 
-fn decode(code: &Code) -> Shape {
-    let mut cubes = Vec::from([[0, 0, 0]]);
-
-    for [from, dir] in code {
-        let p = cubes[*from];
-        let d = DIRECTIONS[*dir];
-        let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
-
-        assert!(!cubes.contains(&q));
-        cubes.push(q);
-    }
-
-    cubes
-}
-
-
 #[inline(never)]
 fn compare_encoding(
     shape: &Shape, dirs: &[Direction], start: Position, code: &Code
@@ -131,23 +115,24 @@ struct CubeBackTracking {
 
 
 impl BackTracking for CubeBackTracking {
-    type State = Code;
+    type State = (Code, Shape);
     type Item = Vec<Position>;
 
-    fn root(&self) -> Code {
-        vec![]
+    fn root(&self) -> Self::State {
+        (vec![], vec![[0, 0, 0]])
     }
 
-    fn extract(&self, code: &Code) -> Option<Self::Item> {
+    fn extract(&self, state: &Self::State) -> Option<Self::Item> {
+        let (code, shape) = state;
         if code.len() == self.max_size - 1 {
-            Some(decode(&code))
+            Some(shape.clone())
         } else {
             None
         }
     }
 
-    fn children(&self, code: &Code) -> Vec<Code> {
-        let cubes = decode(code);
+    fn children(&self, state: &Self::State) -> Vec<Self::State> {
+        let (code, shape) = state;
 
         if code.len() >= self.max_size - 1 {
             vec![]
@@ -155,21 +140,21 @@ impl BackTracking for CubeBackTracking {
             let start = if let Some(c) = code.last() { c[0] } else { 0 };
             let mut result = vec![];
 
-            for i in start..cubes.len() {
-                let p = cubes[i];
+            for i in start..shape.len() {
+                let p = shape[i];
 
                 for (j, d) in DIRECTIONS.iter().enumerate() {
                     let q = [p[0] + d[0], p[1] + d[1], p[2] + d[2]];
 
-                    if !cubes.contains(&q) {
-                        let mut new_shape = cubes.clone();
+                    if !shape.contains(&q) {
+                        let mut new_shape = shape.clone();
                         new_shape.push(q);
 
                         let mut new_code = code.clone();
                         new_code.push([i, j]);
 
                         if is_canonical(&new_shape, &new_code) {
-                            result.push(new_code);
+                            result.push((new_code, new_shape));
                         }
                     }
                 }
@@ -210,30 +195,6 @@ impl Iterator for Cubes {
     fn next(&mut self) -> Option<Self::Item> {
         self.0.next()
     }
-}
-
-
-#[test]
-fn test_decode() {
-    assert_eq!(
-        decode(&vec![]),
-        Vec::from([[0, 0, 0]])
-    );
-
-    assert_eq!(
-        decode(&vec![[0, 1]]),
-        Vec::from([[0, 0, 0], [1, 0, 0]])
-    );
-
-    assert_eq!(
-        decode(&vec![[0, 0], [0, 1]]),
-        Vec::from([[0, 0, 0], [-1, 0, 0], [1, 0, 0]])
-    );
-
-    assert_eq!(
-        decode(&vec![[0, 1], [1, 1]]),
-        Vec::from([[0, 0, 0], [1, 0, 0], [2, 0, 0]])
-    );
 }
 
 
